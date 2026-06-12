@@ -5,6 +5,9 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..', '..');
+const isVercel = Boolean(process.env.VERCEL);
+const runtimeDataDir = isVercel ? path.join('/tmp', 'chatbot-diff-data') : path.join(rootDir, 'data');
+const runtimeUploadsDir = isVercel ? path.join('/tmp', 'chatbot-diff-uploads') : path.join(rootDir, 'uploads');
 
 export const env = {
   PORT: Number(process.env.PORT || 3000),
@@ -21,9 +24,10 @@ export const env = {
   ALLOWED_ORIGIN: process.env.ALLOWED_ORIGIN || 'https://gym-diff.vercel.app',
   RATE_LIMIT_WINDOW_MS: Number(process.env.RATE_LIMIT_WINDOW_MS || 60000),
   RATE_LIMIT_MAX: Number(process.env.RATE_LIMIT_MAX || 30),
+  VERCEL: isVercel,
   rootDir,
-  dataDir: path.join(rootDir, 'data'),
-  uploadsDir: path.join(rootDir, 'uploads'),
+  dataDir: runtimeDataDir,
+  uploadsDir: runtimeUploadsDir,
 };
 
-export const SYSTEM_VERSION = '1.1.0';
+export const SYSTEM_VERSION = '1.1.1';

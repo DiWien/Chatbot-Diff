@@ -4,11 +4,13 @@ import path from 'path';
 import crypto from 'crypto';
 import { env } from '../config/env.js';
 import { requireAdmin } from '../middleware/auth.js';
+import { ensureDir } from '../storage/file.store.js';
 import { listKnowledge } from '../storage/knowledge.store.js';
 import { createDocumentFromUpload, createFaq, removeKnowledge, reindexKnowledge, validateUpload } from '../services/knowledge.service.js';
 import { asyncHandler, ok } from '../utils/response.js';
 
 const router = express.Router();
+ensureDir(env.uploadsDir);
 
 const storage = multer.diskStorage({
   destination: env.uploadsDir,

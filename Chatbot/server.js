@@ -30,7 +30,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api/auth', authRoutes);
 app.use('/api/admin/knowledge', knowledgeRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api', apiCors, chatLimiter, chatRoutes);
+app.use('/api', apiCors, chatRoutes);
 app.use('/widget', widgetRoutes);
 
 app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
@@ -40,7 +40,7 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.ht
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-if (env.NODE_ENV !== 'test') {
+if (env.NODE_ENV !== 'test' && !env.VERCEL) {
   app.listen(env.PORT, () => {
     console.log(`Chatbot Diff AI running on port ${env.PORT}`);
   });
