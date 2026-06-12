@@ -7,7 +7,7 @@ import { callOpenAI } from './openai.service.js';
 
 export async function askAI({ message, userId, source }) {
   const start = Date.now();
-  const safe = getSafeConfig();
+  const safe = await getSafeConfig();
 
   if (safe.status !== 'active') {
     return { reply: 'Chatbot hiện đang tạm tắt.', provider: safe.provider, model: safe.model, usedKnowledge: false, latency: 0 };
@@ -19,7 +19,7 @@ export async function askAI({ message, userId, source }) {
   try {
     const reply = await callProvider({ message, context });
     const latency = Date.now() - start;
-    incrementQuestionCount();
+    await incrementQuestionCount();
     addLog({ source: source || 'unknown', userId: userId || '', message: truncate(message), responseStatus: 'success', latency, error: '' });
     return { reply: reply || 'Diff Coach chưa có dữ liệu chắc chắn để trả lời câu hỏi này.', provider: safe.provider, model: safe.model, usedKnowledge: chunks.length > 0, latency };
   } catch (error) {
@@ -32,17 +32,17 @@ export async function askAI({ message, userId, source }) {
 export async function testAIConnection(input = {}) {
   try {
     await callProvider({ message: 'Trả lời ngắn gọn: kết nối AI đã sẵn sàng.', context: '', override: input });
-    markConnectionTest('success');
+    await markConnectionTest('success');
     return { status: 'success' };
   } catch (error) {
-    markConnectionTest('failed');
+    await markConnectionTest('failed');
     throw error;
   }
 }
 
 async function callProvider({ message, context, override = {} }) {
-  const config = getConfig();
-  const safe = getSafeConfig();
+  const config = await getConfig();
+  const safe = await getSafeConfig();
   const provider = normalizeProvider(override.provider || safe.provider);
   const apiKey = String(override.apiKey || '').trim() || getApiKey(config);
   const payload = {

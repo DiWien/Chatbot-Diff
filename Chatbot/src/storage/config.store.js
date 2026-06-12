@@ -2,28 +2,27 @@ import bcrypt from 'bcryptjs';
 import { env } from '../config/env.js';
 import { decryptSecret, encryptSecret, maskSecret } from '../services/crypto.service.js';
 import { readJson, writeJson } from './file.store.js';
+import { hasSupabaseStorage, readSupabaseConfig, writeSupabaseConfig } from './supabase.store.js';
 
 const FILE = 'config.json';
 const DEFAULT_PROMPT = 'Bạn là Diff Coach, trợ lý AI của website Diff Gym. Trả lời bằng tiếng Việt, ngắn gọn, rõ ràng, thân thiện. Ưu tiên hỗ trợ về gym, bài tập, lịch tập, dinh dưỡng và cách sử dụng website. Nếu không có dữ liệu chắc chắn, hãy nói rõ là chưa có dữ liệu, không bịa thông tin.';
+let memoryConfig = null;
 
 export async function ensureConfig() {
-  const existing = readJson(FILE, null);
-  if (existing) {
-    let changed = false;
-    existing.admin = existing.admin || {};
-    if (!existing.admin.username) {
-      existing.admin.username = env.ADMIN_USERNAME;
-      changed = true;
-    }
-    if (env.ADMIN_PASSWORD === 'admin@123321') {
-      existing.admin.passwordHash = await bcrypt.hash(env.ADMIN_PASSWORD, 12);
-      changed = true;
-    }
-    return changed ? saveConfig(existing) : existing;
+  const existing = await getConfig();
+  if (existing?.admin && existing?.ai && existing?.security) {
+    const migrated = await migrateConfig(existing);
+    if (migrated.changed) return saveConfig(migrated.config);
+    return existing;
   }
 
+  const config = await createDefaultConfig();
+  return saveConfig(config);
+}
+
+async function createDefaultConfig() {
   const apiKey = env.AI_PROVIDER === 'openai' ? env.OPENAI_API_KEY : env.GEMINI_API_KEY;
-  const config = {
+  return {
     admin: {
       username: env.ADMIN_USERNAME,
       email: env.ADMIN_EMAIL,
@@ -47,30 +46,82 @@ export async function ensureConfig() {
       rateLimitWindowMs: env.RATE_LIMIT_WINDOW_MS,
       rateLimitMax: env.RATE_LIMIT_MAX,
     },
-    stats: {
-      totalQuestions: 0,
-    },
+    stats: { totalQuestions: 0 },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
-
-  return writeJson(FILE, config);
 }
 
-export function getConfig() {
-  return readJson(FILE, {});
+async function migrateConfig(config) {
+  let changed = false;
+  config.admin = config.admin || {};
+  config.ai = config.ai || {};
+  config.security = config.security || {};
+  config.stats = config.stats || { totalQuestions: 0 };
+
+  if (!config.admin.username) {
+    config.admin.username = env.ADMIN_USERNAME;
+    changed = true;
+  }
+
+  if (!config.admin.email) {
+    config.admin.email = env.ADMIN_EMAIL;
+    changed = true;
+  }
+
+  if (!config.admin.passwordHash) {
+    config.admin.passwordHash = await bcrypt.hash(env.ADMIN_PASSWORD, 12);
+    changed = true;
+  }
+
+  if (!config.ai.status) {
+    config.ai.status = 'active';
+    changed = true;
+  }
+
+  if (!config.security.allowedOrigin) {
+    config.security.allowedOrigin = env.ALLOWED_ORIGIN;
+    changed = true;
+  }
+
+  return { config, changed };
 }
 
-export function saveConfig(config) {
-  return writeJson(FILE, { ...config, updatedAt: new Date().toISOString() });
+export async function getConfig() {
+  if (hasSupabaseStorage()) {
+    const supabaseConfig = await readSupabaseConfig();
+    if (supabaseConfig) {
+      memoryConfig = supabaseConfig;
+      return supabaseConfig;
+    }
+  }
+
+  const localConfig = readJson(FILE, null);
+  if (localConfig) {
+    memoryConfig = localConfig;
+    return localConfig;
+  }
+
+  if (memoryConfig) return memoryConfig;
+  return {};
 }
 
-export function getApiKey(config = getConfig()) {
+export function getConfigSync() {
+  return memoryConfig || readJson(FILE, {});
+}
+
+export async function saveConfig(config) {
+  const next = { ...config, updatedAt: new Date().toISOString() };
+  memoryConfig = next;
+  if (hasSupabaseStorage()) await writeSupabaseConfig(next);
+  return writeJson(FILE, next);
+}
+
+export function getApiKey(config = getConfigSync()) {
   return decryptSecret(config.ai?.apiKeyEncrypted || '');
 }
 
-export function getSafeConfig() {
-  const config = getConfig();
+export function toSafeConfig(config = getConfigSync()) {
   const apiKey = getApiKey(config);
   return {
     provider: config.ai?.provider || 'gemini',
@@ -80,7 +131,7 @@ export function getSafeConfig() {
     maxTokens: Number(config.ai?.maxTokens ?? 700),
     status: config.ai?.status || 'active',
     chatbotName: config.ai?.chatbotName || 'Diff Coach',
-    welcomeMessage: config.ai?.welcomeMessage || '',
+    welcomeMessage: config.ai?.welcomeMessage || 'Xin chào, tôi là Diff Coach. Bạn cần hỗ trợ gì về tập luyện hoặc dinh dưỡng?',
     allowedOrigin: config.security?.allowedOrigin || env.ALLOWED_ORIGIN,
     rateLimitWindowMs: config.security?.rateLimitWindowMs || env.RATE_LIMIT_WINDOW_MS,
     rateLimitMax: config.security?.rateLimitMax || env.RATE_LIMIT_MAX,
@@ -91,54 +142,68 @@ export function getSafeConfig() {
   };
 }
 
-export function updateAiConfig(input) {
-  const config = getConfig();
+export async function getSafeConfig() {
+  return toSafeConfig(await getConfig());
+}
+
+export function getSafeConfigSync() {
+  return toSafeConfig(getConfigSync());
+}
+
+export async function updateAiConfig(input) {
+  const config = await getConfig();
+  config.ai = config.ai || {};
+  config.security = config.security || {};
   const currentKey = getApiKey(config);
   const nextKey = typeof input.apiKey === 'string' && input.apiKey.trim() ? input.apiKey.trim() : currentKey;
 
   config.ai = {
     ...config.ai,
-    provider: input.provider || config.ai.provider,
+    provider: input.provider || config.ai.provider || 'gemini',
     apiKeyEncrypted: encryptSecret(nextKey),
-    model: input.model || config.ai.model,
-    systemPrompt: input.systemPrompt || config.ai.systemPrompt,
-    temperature: Number(input.temperature ?? config.ai.temperature),
-    maxTokens: Number(input.maxTokens ?? config.ai.maxTokens),
-    status: input.status || config.ai.status,
-    chatbotName: input.chatbotName || config.ai.chatbotName,
-    welcomeMessage: input.welcomeMessage || config.ai.welcomeMessage,
+    model: input.model || config.ai.model || 'gemini-2.5-flash',
+    systemPrompt: input.systemPrompt || config.ai.systemPrompt || DEFAULT_PROMPT,
+    temperature: Number(input.temperature ?? config.ai.temperature ?? 0.3),
+    maxTokens: Number(input.maxTokens ?? config.ai.maxTokens ?? 700),
+    status: String(input.status || config.ai.status || 'active').toLowerCase(),
+    chatbotName: input.chatbotName || config.ai.chatbotName || 'Diff Coach',
+    welcomeMessage: input.welcomeMessage || config.ai.welcomeMessage || 'Xin chào, tôi là Diff Coach. Bạn cần hỗ trợ gì về tập luyện hoặc dinh dưỡng?',
   };
 
   config.security = {
     ...config.security,
-    allowedOrigin: input.allowedOrigin || config.security.allowedOrigin,
+    allowedOrigin: input.allowedOrigin || config.security.allowedOrigin || env.ALLOWED_ORIGIN,
   };
 
   return saveConfig(config);
 }
 
 export async function updateAdminCredentials(email, password) {
-  const config = getConfig();
-  config.admin.email = email || config.admin.email;
+  const config = await getConfig();
+  config.admin = config.admin || {};
+  config.admin.email = email || config.admin.email || env.ADMIN_EMAIL;
   if (password) config.admin.passwordHash = await bcrypt.hash(password, 12);
   return saveConfig(config);
 }
 
-export function clearApiKey() {
-  const config = getConfig();
+export async function clearApiKey() {
+  const config = await getConfig();
+  config.ai = config.ai || {};
   config.ai.apiKeyEncrypted = '';
   return saveConfig(config);
 }
 
-export function markConnectionTest(status) {
-  const config = getConfig();
+export async function markConnectionTest(status) {
+  const config = await getConfig();
+  config.ai = config.ai || {};
   config.ai.lastTestAt = new Date().toISOString();
   config.ai.lastTestStatus = status;
   return saveConfig(config);
 }
 
-export function incrementQuestionCount() {
-  const config = getConfig();
+export async function incrementQuestionCount() {
+  const config = await getConfig();
+  config.stats = config.stats || {};
   config.stats.totalQuestions = Number(config.stats.totalQuestions || 0) + 1;
   return saveConfig(config);
 }

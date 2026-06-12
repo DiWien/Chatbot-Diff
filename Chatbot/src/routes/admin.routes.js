@@ -11,9 +11,9 @@ import { asyncHandler, ok } from '../utils/response.js';
 const router = express.Router();
 router.use(requireAdmin);
 
-router.get('/dashboard', (req, res) => {
-  const safe = getSafeConfig();
-  const config = getConfig();
+router.get('/dashboard', asyncHandler(async (req, res) => {
+  const safe = await getSafeConfig();
+  const config = await getConfig();
   const docs = listKnowledge();
   const training = getTrainingStats();
   ok(res, {
@@ -32,13 +32,13 @@ router.get('/dashboard', (req, res) => {
       logs: listLogs().slice(0, 10),
     },
   });
-});
+}));
 
-router.get('/config', (req, res) => ok(res, { config: getSafeConfig(), defaultPrompt: DEFAULT_PROMPT }));
+router.get('/config', asyncHandler(async (req, res) => ok(res, { config: await getSafeConfig(), defaultPrompt: DEFAULT_PROMPT })));
 
 router.post('/config', asyncHandler(async (req, res) => {
-  updateAiConfig(req.body || {});
-  ok(res, { config: getSafeConfig() });
+  await updateAiConfig(req.body || {});
+  ok(res, { config: await getSafeConfig() });
 }));
 
 router.post('/test-connection', async (req, res) => {
@@ -57,8 +57,7 @@ router.post('/test-connection', async (req, res) => {
 });
 
 router.delete('/api-key', (req, res) => {
-  clearApiKey();
-  ok(res, { config: getSafeConfig() });
+  clearApiKey().then(async () => ok(res, { config: await getSafeConfig() }));
 });
 
 router.post('/training/process', (req, res) => ok(res, processDocuments()));
@@ -70,26 +69,26 @@ router.get('/logs', (req, res) => ok(res, { logs: listLogs() }));
 router.post('/settings', asyncHandler(async (req, res) => {
   const { adminEmail, adminPassword, allowedOrigin, status, rateLimitWindowMs, rateLimitMax } = req.body || {};
   if (adminEmail || adminPassword) await updateAdminCredentials(adminEmail, adminPassword);
-  const config = getConfig();
+  const config = await getConfig();
   config.security.allowedOrigin = allowedOrigin || config.security.allowedOrigin;
   config.security.rateLimitWindowMs = Number(rateLimitWindowMs || config.security.rateLimitWindowMs);
   config.security.rateLimitMax = Number(rateLimitMax || config.security.rateLimitMax);
   config.ai.status = status || config.ai.status;
-  saveConfig(config);
-  ok(res, { config: getSafeConfig() });
+  await saveConfig(config);
+  ok(res, { config: await getSafeConfig() });
 }));
 
-router.get('/export', (req, res) => {
-  const config = getConfig();
+router.get('/export', asyncHandler(async (req, res) => {
+  const config = await getConfig();
   const { apiKeyEncrypted, ...aiSafe } = config.ai;
   res.json({ ...config, ai: { ...aiSafe, apiKeyEncrypted: '[hidden]' } });
-});
+}));
 
-router.post('/import', (req, res) => {
+router.post('/import', asyncHandler(async (req, res) => {
   const incoming = req.body || {};
-  const current = getConfig();
-  saveConfig({ ...current, ...incoming, ai: { ...current.ai, ...(incoming.ai || {}), apiKeyEncrypted: current.ai.apiKeyEncrypted } });
-  ok(res, { config: getSafeConfig() });
-});
+  const current = await getConfig();
+  await saveConfig({ ...current, ...incoming, ai: { ...current.ai, ...(incoming.ai || {}), apiKeyEncrypted: current.ai.apiKeyEncrypted } });
+  ok(res, { config: await getSafeConfig() });
+}));
 
 export default router;
