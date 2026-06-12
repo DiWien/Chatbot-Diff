@@ -6,11 +6,30 @@ function toast(message) { const el = qs('#toast'); el.textContent = message; el.
 async function api(url, options = {}) { const res = await fetch(url, { credentials: 'same-origin', ...options, headers: { ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }), ...(options.headers || {}) } }); const data = await res.json().catch(() => ({})); if (!res.ok) throw new Error(data.message || data.error || 'Request failed'); return data; }
 
 async function init() {
-  try { const me = await api('/api/auth/me'); qs('#adminEmail').textContent = me.admin.email; } catch { location.href = '/login'; return; }
+  try { const me = await api('/api/auth/me'); qs('#adminEmail').textContent = me.admin.email; } catch { location.href = `/login?next=${encodeURIComponent(location.pathname + location.search + location.hash)}`; return; }
   bindTabs(); bindForms(); await Promise.all([loadDashboard(), loadConfig(), loadKnowledge(), loadLogs()]);
+  activateInitialTab();
 }
 
-function bindTabs() { qsa('#tabs button').forEach((btn) => btn.addEventListener('click', () => { qsa('#tabs button').forEach((b) => b.classList.remove('active')); qsa('.tab-panel').forEach((p) => p.classList.remove('active')); btn.classList.add('active'); qs(`#${btn.dataset.tab}`).classList.add('active'); qs('#pageTitle').textContent = btn.textContent; if (btn.dataset.tab === 'logs') loadLogs(); })); }
+function bindTabs() { qsa('#tabs button').forEach((btn) => btn.addEventListener('click', () => activateTab(btn.dataset.tab, true))); }
+
+function activateInitialTab() {
+  const params = new URLSearchParams(location.search);
+  const tab = params.get('tab') || location.hash.replace('#', '') || 'dashboard';
+  activateTab(tab, false);
+}
+
+function activateTab(tab, updateUrl) {
+  const btn = qs(`#tabs button[data-tab="${tab}"]`) || qs('#tabs button[data-tab="dashboard"]');
+  const target = qs(`#${btn.dataset.tab}`);
+  qsa('#tabs button').forEach((item) => item.classList.remove('active'));
+  qsa('.tab-panel').forEach((panel) => panel.classList.remove('active'));
+  btn.classList.add('active');
+  target.classList.add('active');
+  qs('#pageTitle').textContent = btn.textContent;
+  if (btn.dataset.tab === 'logs') loadLogs();
+  if (updateUrl) history.replaceState(null, '', `/admin?tab=${btn.dataset.tab}`);
+}
 
 function bindForms() {
   qs('#logoutBtn').onclick = async () => { await api('/api/auth/logout', { method: 'POST' }); location.href = '/login'; };

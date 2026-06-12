@@ -1,8 +1,10 @@
 const form = document.getElementById('loginForm');
 const errorBox = document.getElementById('loginError');
 const btn = document.getElementById('loginBtn');
+const params = new URLSearchParams(location.search);
+const nextUrl = params.get('next') || '/admin';
 
-fetch('/api/auth/me').then((res) => { if (res.ok) location.href = '/admin'; });
+fetch('/api/auth/me').then((res) => { if (res.ok) location.href = nextUrl; });
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -17,7 +19,7 @@ form.addEventListener('submit', async (event) => {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'Đăng nhập thất bại');
-    location.href = '/admin';
+    location.href = nextUrl;
   } catch (error) {
     errorBox.textContent = error.message;
   } finally {
