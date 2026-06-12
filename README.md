@@ -102,9 +102,37 @@ OPENAI_MODEL=gpt-4.1-mini
 ALLOWED_ORIGIN=https://gym-diff.vercel.app
 RATE_LIMIT_WINDOW_MS=60000
 RATE_LIMIT_MAX=30
+
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+SUPABASE_CONFIG_TABLE=chatbot_config
 ```
 
 Đổi `JWT_SECRET`, `ENCRYPTION_KEY`, `ADMIN_PASSWORD` trước khi deploy production.
+
+## Lưu Config Bền Trên Vercel Bằng Supabase
+
+Vercel serverless không lưu bền file JSON local. Nếu muốn API key, trạng thái Active và cấu hình chatbot không mất sau F5/cold start/redeploy, hãy dùng Supabase.
+
+Tạo bảng trong Supabase SQL Editor:
+
+```sql
+create table if not exists public.chatbot_config (
+  id text primary key,
+  config jsonb not null,
+  updated_at timestamptz default now()
+);
+```
+
+Thêm Environment Variables vào Vercel project `Chatbot-Diff`:
+
+```env
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+SUPABASE_CONFIG_TABLE=chatbot_config
+```
+
+Không đưa `SUPABASE_SERVICE_ROLE_KEY` vào Gym Diff frontend. Key này chỉ được đặt trong backend Chatbot-Diff.
 
 ## Tạo Gemini API Key
 

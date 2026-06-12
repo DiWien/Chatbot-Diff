@@ -8,7 +8,7 @@ const router = express.Router();
 
 router.post('/login', asyncHandler(async (req, res) => {
   const { email, password } = req.body || {};
-  const config = getConfig();
+  const config = await getConfig();
   const login = String(email || '').trim().toLowerCase();
   const validEmail = login === String(config.admin.email || '').toLowerCase() || login === String(config.admin.username || 'admin').toLowerCase();
   const validPassword = password && await bcrypt.compare(password, config.admin.passwordHash);
@@ -23,8 +23,7 @@ router.post('/logout', (req, res) => {
 });
 
 router.get('/me', requireAdmin, (req, res) => {
-  const config = getConfig();
-  return ok(res, { admin: { email: req.admin.sub, username: config.admin?.username || 'admin' } });
+  return getConfig().then((config) => ok(res, { admin: { email: req.admin.sub, username: config.admin?.username || 'admin' } }));
 });
 
 export default router;

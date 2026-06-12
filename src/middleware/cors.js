@@ -1,6 +1,6 @@
 import cors from 'cors';
 import { env } from '../config/env.js';
-import { getSafeConfig } from '../storage/config.store.js';
+import { getSafeConfigSync } from '../storage/config.store.js';
 
 const DEFAULT_ALLOWED_ORIGINS = new Set([
   'https://gym-diff.vercel.app',
@@ -9,7 +9,7 @@ const DEFAULT_ALLOWED_ORIGINS = new Set([
 
 export const apiCors = cors({
   origin(origin, callback) {
-    const config = getSafeConfig();
+    const config = getSafeConfigSync();
     const allowedOrigins = parseAllowedOrigins(config.allowedOrigin || env.ALLOWED_ORIGIN);
 
     if (!origin || isAllowedOrigin(origin, allowedOrigins)) {

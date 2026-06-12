@@ -7,15 +7,15 @@ import { asyncHandler } from '../utils/response.js';
 
 const router = express.Router();
 
-router.get('/health', (req, res) => {
-  const config = getSafeConfig();
+router.get('/health', asyncHandler(async (req, res) => {
+  const config = await getSafeConfig();
   res.json({ status: 'ok', service: 'Chatbot Diff API', provider: config.provider, model: config.model, version: SYSTEM_VERSION, timestamp: new Date().toISOString() });
-});
+}));
 
-router.get('/public-config', (req, res) => {
-  const config = getSafeConfig();
+router.get('/public-config', asyncHandler(async (req, res) => {
+  const config = await getSafeConfig();
   res.json({ botName: config.chatbotName, welcomeMessage: config.welcomeMessage, status: config.status });
-});
+}));
 
 router.post('/chat', chatLimiter, asyncHandler(async (req, res) => {
   const { message, userId, source } = req.body || {};

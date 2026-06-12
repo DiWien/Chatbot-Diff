@@ -25,10 +25,13 @@ export const env = {
   ALLOWED_ORIGIN: process.env.ALLOWED_ORIGIN || 'https://gym-diff.vercel.app',
   RATE_LIMIT_WINDOW_MS: Number(process.env.RATE_LIMIT_WINDOW_MS || 60000),
   RATE_LIMIT_MAX: Number(process.env.RATE_LIMIT_MAX || 30),
+  SUPABASE_URL: process.env.SUPABASE_URL || '',
+  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+  SUPABASE_CONFIG_TABLE: process.env.SUPABASE_CONFIG_TABLE || 'chatbot_config',
   VERCEL: isVercel,
   rootDir,
   dataDir: runtimeDataDir,
   uploadsDir: runtimeUploadsDir,
 };
 
-export const SYSTEM_VERSION = '1.1.3';
+export const SYSTEM_VERSION = '1.2.0';
