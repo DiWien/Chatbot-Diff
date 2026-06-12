@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Đăng nhập Admin - Chatbot Diff</title>
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body class="auth-page">
+  <main class="auth-card">
+    <div class="brand"><span class="logo">CD</span><span>Chatbot Diff</span></div>
+    <h1>Đăng nhập Admin</h1>
+    <p>Quản lý AI config, knowledge base và API cho Gym Diff.</p>
+    <form id="loginForm" class="form">
+      <label>Email hoặc username<input id="email" type="text" autocomplete="username" required></label>
+      <label>Password<input id="password" type="password" autocomplete="current-password" required></label>
+      <button class="btn primary full" type="submit" id="loginBtn">Đăng nhập</button>
+      <div class="form-error" id="loginError"></div>
+    </form>
+  </main>
+  <div id="toast" class="toast"></div>
+  <script src="/assets/login.js"></script>
+</body>
+</html>

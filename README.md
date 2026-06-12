@@ -1,282 +1,292 @@
-# Chatbot Diff API
+# Chatbot Diff AI
 
-Server chatbot độc lập cho website Diff Gym. Web Gym Diff chỉ gọi API đến server này, không giữ API key AI và không lưu dữ liệu chatbot ở frontend.
+Chatbot-Diff là server AI độc lập cho website Gym Diff. Gym Diff chỉ gọi API đến server này, không gọi Gemini/OpenAI trực tiếp và không lưu dữ liệu chatbot.
 
-## Kiến trúc
+## Tính Năng
 
-- Frontend Gym Diff deploy trên Vercel.
-- Backend chatbot nằm trong repo `Chatbot-Diff`, chạy Node.js + Express.
-- Database Gym Diff có thể dùng Supabase riêng, không bắt buộc cho chatbot API này.
-- API key Gemini chỉ cấu hình trong server chatbot qua biến môi trường.
-- Web Gym Diff gọi `POST /api/chat` qua CORS.
-- Chatbot server chịu trách nhiệm gọi Gemini và trả lời.
+- Node.js + Express backend.
+- Admin dashboard HTML/CSS/JavaScript thuần, giao diện tối nhẹ kiểu SaaS.
+- Đăng nhập/đăng xuất admin bằng JWT cookie httpOnly.
+- Password admin hash bằng bcrypt.
+- API key AI mã hóa AES-256-GCM trước khi lưu local JSON.
+- Gemini là provider chính, có cấu trúc OpenAI và Custom API.
+- Knowledge Base upload tài liệu và nhập FAQ thủ công.
+- Training/RAG local: extract text, split chunks, gắn metadata, lưu JSON.
+- Chat API dùng chunk liên quan làm context cho AI.
+- Logs cơ bản không lưu key/token/password.
+- CORS theo Allowed Origin và rate limit cho `/api/chat`.
+- Deploy được lên Vercel, Render hoặc VPS.
 
-## Tính năng
-
-- `GET /` trả trạng thái server.
-- `GET /api/health` kiểm tra server sống.
-- `POST /api/chat` nhận câu hỏi và trả lời bằng tiếng Việt.
-- Dùng Gemini API qua `@google/generative-ai`.
-- Model mặc định: `gemini-2.5-flash`.
-- Vai trò chatbot: Diff Coach.
-- Ưu tiên nội dung gym, bài tập, lịch tập, dinh dưỡng và sử dụng Diff Gym.
-- Nếu không có dữ liệu chắc chắn thì nói chưa có dữ liệu, không bịa.
-- Có xử lý lỗi API key sai, hết quota/rate limit và timeout.
-- Không log API key.
-- CORS chỉ cho phép domain Gym Diff gọi.
-
-## Cấu trúc File
+## Cấu Trúc
 
 ```txt
-Chatbot-Diff/
-├─ package.json
+chatbot-diff/
 ├─ server.js
+├─ package.json
 ├─ .env.example
-├─ vercel.json
-└─ README.md
+├─ README.md
+├─ src/
+│  ├─ config/env.js
+│  ├─ middleware/auth.js
+│  ├─ middleware/cors.js
+│  ├─ middleware/rateLimit.js
+│  ├─ middleware/errorHandler.js
+│  ├─ routes/auth.routes.js
+│  ├─ routes/admin.routes.js
+│  ├─ routes/chat.routes.js
+│  ├─ routes/knowledge.routes.js
+│  ├─ routes/widget.routes.js
+│  ├─ services/ai.service.js
+│  ├─ services/gemini.service.js
+│  ├─ services/openai.service.js
+│  ├─ services/crypto.service.js
+│  ├─ services/knowledge.service.js
+│  ├─ services/training.service.js
+│  ├─ storage/config.store.js
+│  ├─ storage/knowledge.store.js
+│  ├─ storage/logs.store.js
+│  └─ utils/response.js
+├─ public/
+│  ├─ index.html
+│  ├─ login.html
+│  ├─ admin.html
+│  ├─ assets/style.css
+│  ├─ assets/app.js
+│  ├─ assets/login.js
+│  ├─ assets/admin.js
+│  └─ widget/chatbot.js
+└─ uploads/.gitkeep
 ```
 
-## Cài Đặt Local
-
-Repo lưu local tại:
-
-```txt
-D:\Chatbot
-```
-
-Cài dependencies:
+## Cài Đặt
 
 ```bash
 npm install
-```
-
-Tạo file `.env` từ `.env.example`:
-
-```bash
 copy .env.example .env
-```
-
-Cấu hình `.env`:
-
-```env
-GEMINI_API_KEY=your_gemini_api_key
-GEMINI_MODEL=gemini-2.5-flash
-ALLOWED_ORIGIN=https://gym-diff.vercel.app
-PORT=3000
-```
-
-Chạy dev:
-
-```bash
 npm run dev
 ```
 
-Chạy production local:
+Chạy production:
 
 ```bash
 npm start
 ```
 
-Server local:
+Mở:
 
 ```txt
 http://localhost:3000
+http://localhost:3000/login
+http://localhost:3000/admin
 ```
 
-## API
+## Cấu Hình `.env`
 
-### `GET /`
+```env
+PORT=3000
+NODE_ENV=development
+
+ADMIN_EMAIL=admin@diffgym.local
+ADMIN_PASSWORD=ChangeMe123
+
+JWT_SECRET=change_this_secret
+ENCRYPTION_KEY=change_this_32_char_key
+
+AI_PROVIDER=gemini
+GEMINI_API_KEY=
+GEMINI_MODEL=gemini-2.5-flash
+
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-4.1-mini
+
+ALLOWED_ORIGIN=https://gym-diff.vercel.app
+RATE_LIMIT_WINDOW_MS=60000
+RATE_LIMIT_MAX=30
+```
+
+Đổi `JWT_SECRET`, `ENCRYPTION_KEY`, `ADMIN_PASSWORD` trước khi deploy production.
+
+## Tạo Gemini API Key
+
+1. Vào Google AI Studio.
+2. Tạo API key mới.
+3. Thêm vào `.env` hoặc nhập trong Admin > AI Config.
+4. Model mặc định: `gemini-2.5-flash`.
+
+## API Public
+
+### Health Check
+
+```txt
+GET /api/health
+```
+
+### Public Config
+
+```txt
+GET /api/public-config
+```
 
 Response:
 
 ```json
 {
-  "status": "ok",
-  "service": "Chatbot Diff API"
+  "botName": "Diff Coach",
+  "welcomeMessage": "...",
+  "status": "active"
 }
 ```
 
-### `GET /api/health`
+### Chat API
 
-Response:
-
-```json
-{
-  "status": "ok",
-  "service": "Chatbot Diff API",
-  "timestamp": "2026-06-12T00:00:00.000Z"
-}
+```txt
+POST /api/chat
 ```
 
-### `POST /api/chat`
-
-Request body:
+Body:
 
 ```json
 {
-  "message": "Câu hỏi người dùng",
+  "message": "Tôi nên tập ngực thế nào?",
   "userId": "optional",
   "source": "gym-diff"
 }
 ```
 
-Success response:
+Response:
 
 ```json
 {
   "success": true,
-  "reply": "Câu trả lời của chatbot"
+  "reply": "Bạn có thể bắt đầu với..."
 }
 ```
 
-Error response:
+## Kết Nối Gym Diff
 
-```json
-{
-  "success": false,
-  "error": "GEMINI_API_ERROR",
-  "reply": "Diff Coach chưa thể trả lời lúc này do lỗi từ dịch vụ AI."
+Gym Diff không gọi Gemini/OpenAI trực tiếp. Chỉ gọi Chatbot-Diff:
+
+```ts
+async function sendToDiffChatbot(message) {
+  const res = await fetch("https://chatbot-diff-domain.com/api/chat", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      message,
+      source: "gym-diff"
+    })
+  });
+
+  const data = await res.json();
+  return data.reply;
 }
 ```
 
-## System Prompt
+## Admin Dashboard
+
+Đăng nhập tại:
 
 ```txt
-Bạn là Diff Coach, trợ lý AI của website Diff Gym. Bạn trả lời bằng tiếng Việt, ngắn gọn, rõ ràng, thân thiện. Bạn hỗ trợ người dùng về tập luyện, bài tập, lịch tập, dinh dưỡng và sử dụng website Diff Gym. Nếu câu hỏi không có dữ liệu chắc chắn, hãy nói rõ là chưa có dữ liệu, không bịa thông tin.
+/login
 ```
 
-## Gọi API Từ Web Gym Diff
+Các trang quản trị:
 
-Endpoint production sau khi deploy:
+- Dashboard
+- AI Config
+- Knowledge Base
+- Training Data
+- API Access
+- Chat Test
+- Logs
+- Settings
 
-```txt
-POST https://domain-chatbot-diff.vercel.app/api/chat
+## Upload Dữ Liệu Huấn Luyện
+
+Admin > Knowledge Base:
+
+- Upload `.txt`, `.md`, `.json`, `.csv`, `.pdf`, `.docx`.
+- Nhập FAQ thủ công.
+- Nhấn Training Data > `Process Documents` để tạo chunks.
+
+Ghi chú: `.txt`, `.md`, `.json`, `.csv` được extract text local ngay. `.pdf` và `.docx` hiện lưu file/metadata trước để sẵn sàng gắn parser chuyên dụng sau.
+
+## Pipeline RAG Local
+
+1. Upload tài liệu.
+2. Extract text.
+3. Split text thành chunk khoảng 500-1000 từ.
+4. Gắn metadata `title`, `source`, `category`, `created_at`, `updated_at`.
+5. Lưu local JSON trong `data/training.json`.
+6. Khi chat, tìm chunk liên quan bằng keyword score.
+7. Đưa context vào prompt AI.
+
+Cấu trúc này sẵn sàng thay bằng Supabase Vector, Pinecone, Chroma hoặc OpenAI Vector Store.
+
+## Test Bằng Curl
+
+Health:
+
+```bash
+curl http://localhost:3000/api/health
 ```
 
-Ví dụ frontend Gym Diff:
+Chat:
 
-```ts
-fetch("https://domain-chatbot-diff.vercel.app/api/chat", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    message: userMessage,
-    source: "gym-diff"
-  })
-});
+```bash
+curl -X POST http://localhost:3000/api/chat \
+  -H "Content-Type: application/json" \
+  -d "{\"message\":\"Tôi nên tập ngực thế nào?\",\"source\":\"gym-diff\"}"
 ```
 
-Ví dụ xử lý response:
+Login admin:
 
-```ts
-const response = await fetch("https://domain-chatbot-diff.vercel.app/api/chat", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    message: userMessage,
-    source: "gym-diff"
-  })
-});
-
-const data = await response.json();
-
-if (data.success) {
-  console.log(data.reply);
-} else {
-  console.error(data.error, data.reply);
-}
+```bash
+curl -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"admin@diffgym.local\",\"password\":\"ChangeMe123\"}"
 ```
 
-Ví dụ local frontend gọi local backend:
+## Deploy Vercel
 
-```ts
-fetch("http://localhost:3000/api/chat", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    message: userMessage,
-    source: "gym-diff"
-  })
-});
-```
+Repo có `vercel.json` route toàn bộ request về `server.js`.
 
-Khi chạy local frontend, đổi `.env` backend:
+1. Import repo `DiWien/Chatbot-Diff` vào Vercel.
+2. Framework Preset: Other.
+3. Thêm Environment Variables như `.env.example`.
+4. Deploy.
 
-```env
-ALLOWED_ORIGIN=http://localhost:5173
-```
+Lưu ý: Vercel serverless không phù hợp để lưu file JSON/upload lâu dài. Production có dữ liệu huấn luyện nên dùng Render/VPS hoặc chuyển storage sang Supabase/PostgreSQL/Object Storage.
 
-## Deploy Lên Vercel
+## Deploy Render
 
-Repo đã có `vercel.json` để route toàn bộ request về `server.js`.
-
-Các bước:
-
-1. Push repo lên GitHub: `https://github.com/DiWien/Chatbot-Diff`.
-2. Vào Vercel Dashboard.
-3. Import repo `Chatbot-Diff`.
-4. Framework Preset chọn `Other` nếu Vercel không tự nhận diện.
-5. Build Command để trống hoặc dùng `npm install`.
-6. Output Directory để trống.
-7. Thêm Environment Variables:
-
-```env
-GEMINI_API_KEY=your_gemini_api_key
-GEMINI_MODEL=gemini-2.5-flash
-ALLOWED_ORIGIN=https://gym-diff.vercel.app
-PORT=3000
-```
-
-Sau khi deploy, test:
-
-```txt
-https://domain-chatbot-diff.vercel.app/
-https://domain-chatbot-diff.vercel.app/api/health
-```
-
-## Deploy Lên Render
-
-Các bước:
-
-1. Push repo lên GitHub: `https://github.com/DiWien/Chatbot-Diff`.
-2. Render Dashboard > New > Web Service.
-3. Connect repo `Chatbot-Diff`.
-4. Runtime chọn Node.
-5. Build command:
+Build command:
 
 ```bash
 npm install
 ```
 
-6. Start command:
+Start command:
 
 ```bash
 npm start
 ```
 
-7. Thêm Environment Variables:
-
-```env
-GEMINI_API_KEY=your_gemini_api_key
-GEMINI_MODEL=gemini-2.5-flash
-ALLOWED_ORIGIN=https://gym-diff.vercel.app
-PORT=3000
-```
-
-## Supabase
-
-Backend database của Gym Diff có thể đặt trên Supabase, nhưng chatbot server này không cần lưu lịch sử chat theo yêu cầu hiện tại.
-
-Nếu sau này muốn lưu lịch sử chat, hãy tạo API lưu ở backend riêng và không lưu trực tiếp từ frontend Gym Diff. Không đưa Supabase service role key hoặc Gemini API key vào frontend.
+Thêm Environment Variables giống `.env.example`.
 
 ## Bảo Mật
 
-- Không commit file `.env`.
-- Không đưa `GEMINI_API_KEY` vào web Gym Diff.
-- Không log API key.
-- `ALLOWED_ORIGIN` nên đặt đúng domain production của Gym Diff.
-- Nếu cần nhiều domain, nên mở rộng cấu hình bằng danh sách domain rõ ràng thay vì cho phép `*`.
-- Rotate API key ngay nếu bị lộ.
+- Không commit `.env`.
+- Không đưa Gemini/OpenAI API key vào Gym Diff frontend.
+- API key mã hóa khi lưu local JSON.
+- Frontend admin chỉ nhận key dạng mask.
+- Password admin được hash bằng bcrypt.
+- Session admin dùng JWT cookie httpOnly.
+- Logs không lưu key/token/password.
+- CORS giới hạn theo `ALLOWED_ORIGIN`.
+- `/api/chat` có rate limit.
 
 ## Scripts
 

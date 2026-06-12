@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin - Chatbot Diff</title>
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body class="admin-page">
+  <aside class="sidebar">
+    <div class="brand"><span class="logo">CD</span><span>Chatbot Diff</span></div>
+    <nav id="tabs">
+      <button data-tab="dashboard" class="active">Dashboard</button>
+      <button data-tab="config">AI Config</button>
+      <button data-tab="knowledge">Knowledge Base</button>
+      <button data-tab="training">Training Data</button>
+      <button data-tab="api">API Access</button>
+      <button data-tab="chat">Chat Test</button>
+      <button data-tab="logs">Logs</button>
+      <button data-tab="settings">Settings</button>
+    </nav>
+    <button class="btn danger full" id="logoutBtn">Đăng xuất</button>
+  </aside>
+  <main class="admin-main">
+    <header class="topbar"><div><h1 id="pageTitle">Dashboard</h1><p id="adminEmail">Admin</p></div><span class="pill">Online</span></header>
+
+    <section class="tab-panel active" id="dashboard"></section>
+
+    <section class="tab-panel" id="config">
+      <div class="grid two">
+        <form class="card form" id="configForm">
+          <h2>AI Config</h2>
+          <label>Provider<select name="provider"><option value="gemini">Gemini</option><option value="openai">OpenAI</option><option value="custom">Custom API</option></select></label>
+          <label>API Key<div class="inline"><input name="apiKey" type="password" placeholder="Nhập key mới nếu muốn thay đổi"><button type="button" class="btn small" id="toggleKey">Show</button></div><small id="apiKeyMask"></small></label>
+          <label>Model<input name="model" placeholder="gemini-2.5-flash"></label>
+          <label>System Prompt<textarea name="systemPrompt" rows="6"></textarea></label>
+          <label>Temperature<input name="temperature" type="number" min="0" max="2" step="0.1"></label>
+          <label>Max Tokens<input name="maxTokens" type="number" min="100" max="4000"></label>
+          <label>Status<select name="status"><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
+          <label>Allowed Origin<input name="allowedOrigin"></label>
+          <label>Chatbot Name<input name="chatbotName"></label>
+          <label>Welcome Message<textarea name="welcomeMessage" rows="3"></textarea></label>
+          <div class="actions"><button class="btn primary" type="submit">Save Config</button><button class="btn" type="button" id="testConnection">Test Connection</button><button class="btn danger" type="button" id="deleteKey">Delete API Key</button><button class="btn" type="button" id="resetPrompt">Reset Default Prompt</button></div>
+        </form>
+        <div class="card"><h2>Gợi ý model</h2><p>Gemini: <code>gemini-2.5-flash</code></p><p>OpenAI: <code>gpt-4.1-mini</code> hoặc <code>gpt-4o-mini</code></p><p>API key sau khi lưu chỉ hiển thị dạng mask, không trả full key về frontend.</p></div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="knowledge">
+      <div class="grid two">
+        <form class="card form" id="uploadForm"><h2>Upload tài liệu</h2><input type="file" name="file" accept=".txt,.md,.pdf,.docx,.json,.csv" required><button class="btn primary">Upload</button><p>.pdf/.docx lưu metadata trước, cần bổ sung parser nếu muốn extract nội dung đầy đủ.</p></form>
+        <form class="card form" id="faqForm"><h2>Nhập FAQ thủ công</h2><label>Câu hỏi<input name="question" required></label><label>Câu trả lời<textarea name="answer" rows="4" required></textarea></label><label>Nhóm chủ đề<input name="category" value="gym"></label><label><input name="active" type="checkbox" checked> Active</label><button class="btn primary">Lưu FAQ</button></form>
+      </div>
+      <div class="card"><h2>Danh sách knowledge</h2><div class="table-wrap"><table><thead><tr><th>Tên</th><th>Loại</th><th>Kích thước</th><th>Ngày upload</th><th>Trạng thái</th><th>Chunks</th><th></th></tr></thead><tbody id="knowledgeRows"></tbody></table></div></div>
+    </section>
+
+    <section class="tab-panel" id="training"><div class="card"><h2>Training/RAG Pipeline</h2><p>Upload tài liệu, extract text, split chunk 500-1000 tokens, gắn metadata, lưu local JSON và sẵn sàng thay bằng vector database.</p><div class="actions"><button class="btn primary" id="processDocs">Process Documents</button><button class="btn" id="rebuildIndex">Rebuild Index</button><button class="btn danger" id="clearTraining">Clear Training Data</button></div><pre id="trainingResult"></pre></div></section>
+
+    <section class="tab-panel" id="api"><div class="card"><h2>API Access</h2><pre>GET /api/health
+POST /api/chat
+GET /api/public-config
+GET /widget/chatbot.js</pre><h3>Chat body</h3><pre>{
+  "message": "Tôi nên tập ngực thế nào?",
+  "userId": "optional",
+  "source": "gym-diff"
+}</pre><h3>Gym Diff example</h3><pre>async function sendToDiffChatbot(message) {
+  const res = await fetch("https://chatbot-diff-domain.com/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message, source: "gym-diff" })
+  });
+  const data = await res.json();
+  return data.reply;
+}</pre><h3>Embed widget</h3><pre>&lt;script src="https://chatbot-domain.com/widget/chatbot.js"&gt;&lt;/script&gt;</pre></div></section>
+
+    <section class="tab-panel" id="chat"><div class="card chat-card"><h2>Chat Test</h2><div class="chat-box" id="chatBox"></div><form id="chatForm" class="chat-form"><input id="chatInput" placeholder="Nhập câu hỏi test..." required><button class="btn primary">Gửi</button><button type="button" class="btn" id="clearChat">Clear</button></form><p id="chatMeta"></p></div></section>
+
+    <section class="tab-panel" id="logs"><div class="card"><h2>Logs</h2><div class="table-wrap"><table><thead><tr><th>Time</th><th>Source</th><th>User</th><th>Message</th><th>Status</th><th>Latency</th><th>Error</th></tr></thead><tbody id="logRows"></tbody></table></div></div></section>
+
+    <section class="tab-panel" id="settings"><form class="card form" id="settingsForm"><h2>Settings</h2><label>Admin email<input name="adminEmail"></label><label>Admin password mới<input name="adminPassword" type="password"></label><label>Allowed Origin<input name="allowedOrigin"></label><label>Rate limit window ms<input name="rateLimitWindowMs" type="number"></label><label>Rate limit max<input name="rateLimitMax" type="number"></label><label>Chatbot status<select name="status"><option value="active">Active</option><option value="inactive">Inactive</option></select></label><div class="actions"><button class="btn primary">Save Settings</button><a class="btn" href="/api/admin/export" target="_blank">Export config</a></div></form></section>
+  </main>
+  <div id="toast" class="toast"></div>
+  <script src="/assets/admin.js"></script>
+</body>
+</html>
