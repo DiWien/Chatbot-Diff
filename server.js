@@ -31,6 +31,13 @@ app.use('/api/admin', adminRoutes);
 app.use('/api', apiCors, chatRoutes);
 app.use('/widget', widgetRoutes);
 
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+app.get('/image.png', (req, res) => {
+  res
+    .type('svg')
+    .send('<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630"><rect width="100%" height="100%" fill="#070b12"/><text x="80" y="330" fill="#ff7a1a" font-size="72" font-family="Arial">Chatbot Diff AI</text></svg>');
+});
+
 app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
