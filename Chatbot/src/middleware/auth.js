@@ -24,12 +24,17 @@ export function setAuthCookie(res, token) {
   res.cookie('diff_admin_token', token, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: env.NODE_ENV === 'production',
+    secure: env.NODE_ENV === 'production' || env.VERCEL,
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: '/',
   });
 }
 
 export function clearAuthCookie(res) {
-  res.clearCookie('diff_admin_token', { path: '/' });
+  res.clearCookie('diff_admin_token', {
+    path: '/',
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: env.NODE_ENV === 'production' || env.VERCEL,
+  });
 }

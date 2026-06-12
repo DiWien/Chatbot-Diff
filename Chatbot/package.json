@@ -4,6 +4,9 @@
   "description": "Standalone AI chatbot server and admin dashboard for Diff Gym.",
   "type": "module",
   "main": "server.js",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "node --watch server.js",
     "start": "node server.js"
