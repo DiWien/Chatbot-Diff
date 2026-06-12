@@ -12,8 +12,9 @@ const runtimeUploadsDir = isVercel ? path.join('/tmp', 'chatbot-diff-uploads') :
 export const env = {
   PORT: Number(process.env.PORT || 3000),
   NODE_ENV: process.env.NODE_ENV || 'development',
+  ADMIN_USERNAME: process.env.ADMIN_USERNAME || 'admin',
   ADMIN_EMAIL: process.env.ADMIN_EMAIL || 'admin@diffgym.local',
-  ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'ChangeMe123',
+  ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'admin@123321',
   JWT_SECRET: process.env.JWT_SECRET || 'change_this_secret',
   ENCRYPTION_KEY: process.env.ENCRYPTION_KEY || 'change_this_32_char_key',
   AI_PROVIDER: process.env.AI_PROVIDER || 'gemini',
@@ -30,4 +31,4 @@ export const env = {
   uploadsDir: runtimeUploadsDir,
 };
 
-export const SYSTEM_VERSION = '1.1.2';
+export const SYSTEM_VERSION = '1.1.3';

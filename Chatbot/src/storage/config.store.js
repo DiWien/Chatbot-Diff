@@ -8,11 +8,24 @@ const DEFAULT_PROMPT = 'Bạn là Diff Coach, trợ lý AI của website Diff Gy
 
 export async function ensureConfig() {
   const existing = readJson(FILE, null);
-  if (existing) return existing;
+  if (existing) {
+    let changed = false;
+    existing.admin = existing.admin || {};
+    if (!existing.admin.username) {
+      existing.admin.username = env.ADMIN_USERNAME;
+      changed = true;
+    }
+    if (env.ADMIN_PASSWORD === 'admin@123321') {
+      existing.admin.passwordHash = await bcrypt.hash(env.ADMIN_PASSWORD, 12);
+      changed = true;
+    }
+    return changed ? saveConfig(existing) : existing;
+  }
 
   const apiKey = env.AI_PROVIDER === 'openai' ? env.OPENAI_API_KEY : env.GEMINI_API_KEY;
   const config = {
     admin: {
+      username: env.ADMIN_USERNAME,
       email: env.ADMIN_EMAIL,
       passwordHash: await bcrypt.hash(env.ADMIN_PASSWORD, 12),
     },
