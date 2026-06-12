@@ -3,8 +3,7 @@ import cookieParser from 'cookie-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { env } from './src/config/env.js';
-import { publicCors, apiCors } from './src/middleware/cors.js';
-import { chatLimiter } from './src/middleware/rateLimit.js';
+import { apiCors } from './src/middleware/cors.js';
 import { errorHandler, notFoundHandler } from './src/middleware/errorHandler.js';
 import authRoutes from './src/routes/auth.routes.js';
 import adminRoutes from './src/routes/admin.routes.js';
@@ -21,7 +20,6 @@ await ensureConfig();
 const app = express();
 
 app.disable('x-powered-by');
-app.use(publicCors);
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());

@@ -30,4 +30,4 @@ export const env = {
   uploadsDir: runtimeUploadsDir,
 };
 
-export const SYSTEM_VERSION = '1.1.1';
+export const SYSTEM_VERSION = '1.1.2';

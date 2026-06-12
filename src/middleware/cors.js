@@ -1,8 +1,6 @@
 import cors from 'cors';
 import { getSafeConfig } from '../storage/config.store.js';
 
-export const publicCors = cors({ origin: true, credentials: true });
-
 export const apiCors = cors({
   origin(origin, callback) {
     const config = getSafeConfig();
