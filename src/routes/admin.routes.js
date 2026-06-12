@@ -4,7 +4,7 @@ import { requireAdmin } from '../middleware/auth.js';
 import { DEFAULT_PROMPT, clearApiKey, getConfig, getSafeConfig, saveConfig, updateAdminCredentials, updateAiConfig } from '../storage/config.store.js';
 import { listKnowledge } from '../storage/knowledge.store.js';
 import { listLogs } from '../storage/logs.store.js';
-import { testAIConnection } from '../services/ai.service.js';
+import { publicReplyForError, safeErrorCode, testAIConnection } from '../services/ai.service.js';
 import { clearTrainingData, getTrainingStats, processDocuments, rebuildIndex } from '../services/training.service.js';
 import { asyncHandler, ok } from '../utils/response.js';
 
@@ -41,10 +41,20 @@ router.post('/config', asyncHandler(async (req, res) => {
   ok(res, { config: getSafeConfig() });
 }));
 
-router.post('/test-connection', asyncHandler(async (req, res) => {
-  const result = await testAIConnection();
-  ok(res, result);
-}));
+router.post('/test-connection', async (req, res) => {
+  try {
+    const result = await testAIConnection(req.body || {});
+    return ok(res, result);
+  } catch (error) {
+    const code = safeErrorCode(error);
+    const status = code === 'AI_AUTH_ERROR' ? 400 : code === 'AI_QUOTA_ERROR' ? 429 : 502;
+    return res.status(status).json({
+      success: false,
+      error: code,
+      message: publicReplyForError(code),
+    });
+  }
+});
 
 router.delete('/api-key', (req, res) => {
   clearApiKey();
