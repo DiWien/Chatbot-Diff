@@ -1,0 +1,25 @@
+{
+  "name": "chatbot-diff",
+  "version": "1.0.0",
+  "description": "Standalone Diff Coach chatbot API for Diff Gym.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node --watch server.js",
+    "start": "node server.js"
+  },
+  "keywords": [
+    "diff-gym",
+    "chatbot",
+    "gemini",
+    "express"
+  ],
+  "author": "DiWien",
+  "license": "MIT",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  }
+}
