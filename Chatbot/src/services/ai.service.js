@@ -29,9 +29,9 @@ export async function askAI({ message, userId, source }) {
   }
 }
 
-export async function testAIConnection() {
+export async function testAIConnection(input = {}) {
   try {
-    await callProvider({ message: 'Trả lời ngắn gọn: kết nối AI đã sẵn sàng.', context: '' });
+    await callProvider({ message: 'Trả lời ngắn gọn: kết nối AI đã sẵn sàng.', context: '', override: input });
     markConnectionTest('success');
     return { status: 'success' };
   } catch (error) {
@@ -40,28 +40,38 @@ export async function testAIConnection() {
   }
 }
 
-async function callProvider({ message, context }) {
+async function callProvider({ message, context, override = {} }) {
   const config = getConfig();
   const safe = getSafeConfig();
+  const provider = normalizeProvider(override.provider || safe.provider);
+  const apiKey = String(override.apiKey || '').trim() || getApiKey(config);
   const payload = {
-    apiKey: getApiKey(config),
-    model: safe.model,
-    systemPrompt: safe.systemPrompt,
-    temperature: safe.temperature,
-    maxTokens: safe.maxTokens,
+    apiKey,
+    model: override.model || safe.model,
+    systemPrompt: override.systemPrompt || safe.systemPrompt,
+    temperature: Number(override.temperature ?? safe.temperature),
+    maxTokens: Number(override.maxTokens ?? safe.maxTokens),
     message,
     context,
   };
 
-  if (safe.provider === 'openai') return callOpenAI(payload);
-  if (safe.provider === 'custom') throw Object.assign(new Error('Custom API chưa được cấu hình.'), { code: 'CUSTOM_NOT_CONFIGURED' });
+  if (provider === 'openai') return callOpenAI(payload);
+  if (provider === 'custom') throw Object.assign(new Error('Custom API chưa được cấu hình.'), { code: 'CUSTOM_NOT_CONFIGURED' });
   return callGemini(payload);
+}
+
+function normalizeProvider(provider) {
+  const value = String(provider || 'gemini').toLowerCase();
+  if (value.includes('openai')) return 'openai';
+  if (value.includes('custom')) return 'custom';
+  return 'gemini';
 }
 
 export function safeErrorCode(error) {
   const status = error?.status || error?.statusCode;
   const message = String(error?.message || '').toLowerCase();
   if (status === 401 || status === 403 || message.includes('api key') || message.includes('permission')) return 'AI_AUTH_ERROR';
+  if (message.includes('missing') && message.includes('api key')) return 'AI_AUTH_ERROR';
   if (status === 429 || message.includes('quota') || message.includes('rate limit')) return 'AI_QUOTA_ERROR';
   if (message.includes('timeout') || message.includes('abort')) return 'AI_TIMEOUT';
   return error?.code || 'AI_ERROR';

@@ -36,7 +36,7 @@ function bindForms() {
   qs('#toggleKey').onclick = () => { const input = qs('[name="apiKey"]'); input.type = input.type === 'password' ? 'text' : 'password'; qs('#toggleKey').textContent = input.type === 'password' ? 'Show' : 'Hide'; };
   qs('#resetPrompt').onclick = () => { qs('[name="systemPrompt"]').value = defaultPrompt; };
   qs('#deleteKey').onclick = async () => { await api('/api/admin/api-key', { method: 'DELETE' }); toast('Đã xóa API key'); loadConfig(); };
-  qs('#testConnection').onclick = async () => { try { await api('/api/admin/test-connection', { method: 'POST' }); toast('Kết nối AI thành công'); loadDashboard(); } catch (e) { toast(e.message); } };
+  qs('#testConnection').onclick = async () => { try { const body = Object.fromEntries(new FormData(qs('#configForm'))); await api('/api/admin/test-connection', { method: 'POST', body: JSON.stringify(body) }); toast('Kết nối AI thành công'); loadDashboard(); } catch (e) { toast(e.message); } };
   qs('#configForm').onsubmit = async (e) => { e.preventDefault(); const body = Object.fromEntries(new FormData(e.target)); await api('/api/admin/config', { method: 'POST', body: JSON.stringify(body) }); toast('Đã lưu config'); loadConfig(); loadDashboard(); };
   qs('#uploadForm').onsubmit = async (e) => { e.preventDefault(); await api('/api/admin/knowledge/upload', { method: 'POST', body: new FormData(e.target) }); toast('Đã upload'); e.target.reset(); loadKnowledge(); };
   qs('#faqForm').onsubmit = async (e) => { e.preventDefault(); const body = Object.fromEntries(new FormData(e.target)); body.active = Boolean(body.active); await api('/api/admin/knowledge/faq', { method: 'POST', body: JSON.stringify(body) }); toast('Đã lưu FAQ'); e.target.reset(); loadKnowledge(); };
