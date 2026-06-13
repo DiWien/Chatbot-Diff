@@ -10,7 +10,11 @@ export async function readSupabaseConfig() {
   if (!hasSupabaseStorage()) return null;
   const url = `${env.SUPABASE_URL.replace(/\/$/, '')}/rest/v1/${env.SUPABASE_CONFIG_TABLE}?id=eq.${CONFIG_ID}&select=config`;
   const response = await fetch(url, { headers: getHeaders() });
-  if (!response.ok) throw new Error(`Supabase config read failed: ${response.status}`);
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    throw new Error(`Supabase config read failed: ${response.status} ${body.slice(0, 180)}`);
+  }
   const rows = await response.json();
   return rows?.[0]?.config || null;
 }
@@ -23,7 +27,10 @@ export async function writeSupabaseConfig(config) {
     headers: { ...getHeaders(), Prefer: 'resolution=merge-duplicates,return=representation' },
     body: JSON.stringify({ id: CONFIG_ID, config, updated_at: new Date().toISOString() }),
   });
-  if (!response.ok) throw new Error(`Supabase config write failed: ${response.status}`);
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    throw new Error(`Supabase config write failed: ${response.status} ${body.slice(0, 180)}`);
+  }
   return config;
 }
 
