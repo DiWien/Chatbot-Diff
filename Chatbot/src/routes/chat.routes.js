@@ -28,7 +28,13 @@ router.post('/chat', chatLimiter, asyncHandler(async (req, res) => {
     return res.json({ success: true, reply: result.reply, meta: { provider: result.provider, model: result.model, latency: result.latency, usedKnowledge: result.usedKnowledge } });
   } catch (error) {
     const code = error.publicCode || 'AI_ERROR';
-    return res.status(code === 'AI_QUOTA_ERROR' ? 429 : 502).json({ success: false, error: code, reply: publicReplyForError(code) });
+    const config = await getSafeConfig();
+    return res.status(code === 'AI_QUOTA_ERROR' ? 429 : code === 'AI_AUTH_ERROR' ? 400 : 502).json({
+      success: false,
+      error: code,
+      reply: publicReplyForError(code),
+      meta: { provider: config.provider, model: config.model, latency: error.latency || 0, usedKnowledge: false },
+    });
   }
 }));
 

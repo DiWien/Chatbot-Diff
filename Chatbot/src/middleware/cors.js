@@ -5,6 +5,8 @@ import { getSafeConfigSync } from '../storage/config.store.js';
 const DEFAULT_ALLOWED_ORIGINS = new Set([
   'https://gym-diff.vercel.app',
   'https://www.gym-diff.vercel.app',
+  'https://chatbotdiff.vercel.app',
+  'https://chatbot-diff.vercel.app',
 ]);
 
 export const apiCors = cors({
@@ -46,6 +48,8 @@ function isAllowedOrigin(origin, allowedOrigins) {
       || host === 'www.gym-diff.vercel.app'
       || (host.endsWith('.vercel.app') && host.includes('gym-diff'))
       || (host.endsWith('.vercel.app') && host.includes('gymdiff'))
+      || (host.endsWith('.vercel.app') && host.includes('chatbotdiff'))
+      || (host.endsWith('.vercel.app') && host.includes('chatbot-diff'))
       || host.endsWith('-diwien.vercel.app')
     );
   } catch {
