@@ -89,10 +89,14 @@ async function migrateConfig(config) {
 
 export async function getConfig() {
   if (hasSupabaseStorage()) {
-    const supabaseConfig = await readSupabaseConfig();
-    if (supabaseConfig) {
-      memoryConfig = supabaseConfig;
-      return supabaseConfig;
+    try {
+      const supabaseConfig = await readSupabaseConfig();
+      if (supabaseConfig) {
+        memoryConfig = supabaseConfig;
+        return supabaseConfig;
+      }
+    } catch (error) {
+      console.error('Supabase config read failed, using fallback config:', safeError(error));
     }
   }
 
@@ -113,12 +117,24 @@ export function getConfigSync() {
 export async function saveConfig(config) {
   const next = { ...config, updatedAt: new Date().toISOString() };
   memoryConfig = next;
-  if (hasSupabaseStorage()) await writeSupabaseConfig(next);
+  if (hasSupabaseStorage()) {
+    try {
+      await writeSupabaseConfig(next);
+    } catch (error) {
+      console.error('Supabase config write failed, using runtime fallback only:', safeError(error));
+      next.storageWarning = 'SUPABASE_WRITE_FAILED';
+    }
+  }
   return writeJson(FILE, next);
 }
 
 export function getApiKey(config = getConfigSync()) {
-  return decryptSecret(config.ai?.apiKeyEncrypted || '');
+  try {
+    return decryptSecret(config.ai?.apiKeyEncrypted || '');
+  } catch (error) {
+    console.error('Could not decrypt AI API key:', safeError(error));
+    return '';
+  }
 }
 
 export function toSafeConfig(config = getConfigSync()) {
@@ -206,6 +222,10 @@ export async function incrementQuestionCount() {
   config.stats = config.stats || {};
   config.stats.totalQuestions = Number(config.stats.totalQuestions || 0) + 1;
   return saveConfig(config);
+}
+
+function safeError(error) {
+  return { name: error?.name, message: error?.message };
 }
 
 export { DEFAULT_PROMPT };
