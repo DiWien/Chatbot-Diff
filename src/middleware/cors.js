@@ -17,6 +17,7 @@ export const apiCors = cors({
       return;
     }
 
+    console.warn('Blocked CORS origin:', origin);
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
@@ -39,7 +40,14 @@ function isAllowedOrigin(origin, allowedOrigins) {
 
   try {
     const url = new URL(origin);
-    return url.hostname === 'gym-diff.vercel.app' || url.hostname.endsWith('-diwien.vercel.app');
+    const host = url.hostname.toLowerCase();
+    return (
+      host === 'gym-diff.vercel.app'
+      || host === 'www.gym-diff.vercel.app'
+      || (host.endsWith('.vercel.app') && host.includes('gym-diff'))
+      || (host.endsWith('.vercel.app') && host.includes('gymdiff'))
+      || host.endsWith('-diwien.vercel.app')
+    );
   } catch {
     return false;
   }
