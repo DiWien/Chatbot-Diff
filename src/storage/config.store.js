@@ -6,6 +6,7 @@ import { hasSupabaseStorage, readSupabaseConfig, writeSupabaseConfig } from './s
 
 const FILE = 'config.json';
 const DEFAULT_PROMPT = 'Bạn là Diff Coach, trợ lý AI của website Diff Gym. Trả lời bằng tiếng Việt, ngắn gọn, rõ ràng, thân thiện. Ưu tiên hỗ trợ về gym, bài tập, lịch tập, dinh dưỡng và cách sử dụng website. Nếu không có dữ liệu chắc chắn, hãy nói rõ là chưa có dữ liệu, không bịa thông tin.';
+const NUTRITION_PROMPT = 'Bạn là AI Nutrition Coach của Diff Gym. Tập trung phân tích dinh dưỡng, mục tiêu calories/macros, thực đơn, dị ứng, lịch tập và đánh giá body ở mức tham khảo. Trả lời đúng định dạng người dùng yêu cầu, không chẩn đoán y khoa.';
 let memoryConfig = null;
 
 export async function ensureConfig() {
@@ -42,6 +43,18 @@ async function createDefaultConfig() {
       lastTestAt: null,
       lastTestStatus: 'never',
     },
+    nutritionAi: {
+      provider: env.AI_PROVIDER,
+      apiKeyEncrypted: encryptSecret(apiKey),
+      model: env.AI_PROVIDER === 'openai' ? env.OPENAI_MODEL : env.GEMINI_MODEL,
+      baseUrl: env.ROUTER_BASE_URL,
+      systemPrompt: NUTRITION_PROMPT,
+      temperature: 0.25,
+      maxTokens: 1400,
+      status: 'active',
+      lastTestAt: null,
+      lastTestStatus: 'never',
+    },
     security: {
       allowedOrigin: env.ALLOWED_ORIGIN,
       rateLimitWindowMs: env.RATE_LIMIT_WINDOW_MS,
@@ -58,6 +71,7 @@ async function migrateConfig(config) {
   let changed = false;
   config.admin = config.admin || {};
   config.ai = config.ai || {};
+  config.nutritionAi = config.nutritionAi || { ...config.ai, systemPrompt: NUTRITION_PROMPT, maxTokens: 1400, lastTestAt: null, lastTestStatus: 'never' };
   config.security = config.security || {};
   config.stats = config.stats || { totalQuestions: 0 };
   config.runtimeData = config.runtimeData || { logs: [], knowledge: [], trainingChunks: [] };
@@ -131,25 +145,26 @@ export async function saveConfig(config) {
   return writeJson(FILE, next);
 }
 
-export function getApiKey(config = getConfigSync()) {
+export function getApiKey(config = getConfigSync(), profile = 'chat') {
   try {
-    return decryptSecret(config.ai?.apiKeyEncrypted || '');
+    return decryptSecret(getAiProfile(config, profile)?.apiKeyEncrypted || '');
   } catch (error) {
     console.error('Could not decrypt AI API key:', safeError(error));
     return '';
   }
 }
 
-export function toSafeConfig(config = getConfigSync()) {
-  const apiKey = getApiKey(config);
+export function toSafeConfig(config = getConfigSync(), profile = 'chat') {
+  const ai = getAiProfile(config, profile);
+  const apiKey = getApiKey(config, profile);
   return {
-    provider: config.ai?.provider || 'gemini',
-    model: config.ai?.model || 'gemini-2.5-flash',
-    baseUrl: config.ai?.baseUrl || '',
-    systemPrompt: config.ai?.systemPrompt || DEFAULT_PROMPT,
-    temperature: Number(config.ai?.temperature ?? 0.3),
-    maxTokens: Number(config.ai?.maxTokens ?? 700),
-    status: config.ai?.status || 'active',
+    provider: ai?.provider || 'gemini',
+    model: ai?.model || 'gemini-2.5-flash',
+    baseUrl: ai?.baseUrl || '',
+    systemPrompt: ai?.systemPrompt || (profile === 'nutrition' ? NUTRITION_PROMPT : DEFAULT_PROMPT),
+    temperature: Number(ai?.temperature ?? 0.3),
+    maxTokens: Number(ai?.maxTokens ?? (profile === 'nutrition' ? 1400 : 700)),
+    status: ai?.status || 'active',
     chatbotName: config.ai?.chatbotName || 'Diff Coach',
     welcomeMessage: config.ai?.welcomeMessage || 'Xin chào, tôi là Diff Coach. Bạn cần hỗ trợ gì về tập luyện hoặc dinh dưỡng?',
     allowedOrigin: config.security?.allowedOrigin || env.ALLOWED_ORIGIN,
@@ -157,39 +172,45 @@ export function toSafeConfig(config = getConfigSync()) {
     rateLimitMax: config.security?.rateLimitMax || env.RATE_LIMIT_MAX,
     apiKeyMask: maskSecret(apiKey),
     hasApiKey: Boolean(apiKey),
-    lastTestAt: config.ai?.lastTestAt || null,
-    lastTestStatus: config.ai?.lastTestStatus || 'never',
+    lastTestAt: ai?.lastTestAt || null,
+    lastTestStatus: ai?.lastTestStatus || 'never',
+    nutrition: profile === 'chat' ? toSafeConfig(config, 'nutrition') : undefined,
   };
 }
 
-export async function getSafeConfig() {
-  return toSafeConfig(await getConfig());
+export async function getSafeConfig(profile = 'chat') {
+  return toSafeConfig(await getConfig(), profile);
 }
 
-export function getSafeConfigSync() {
-  return toSafeConfig(getConfigSync());
+export function getSafeConfigSync(profile = 'chat') {
+  return toSafeConfig(getConfigSync(), profile);
 }
 
 export async function updateAiConfig(input) {
   const config = await getConfig();
-  config.ai = config.ai || {};
+  const profile = input.profile === 'nutrition' ? 'nutrition' : 'chat';
+  const key = profile === 'nutrition' ? 'nutritionAi' : 'ai';
+  config[key] = config[key] || {};
   config.security = config.security || {};
-  const currentKey = getApiKey(config);
+  const currentKey = getApiKey(config, profile);
   const nextKey = typeof input.apiKey === 'string' && input.apiKey.trim() ? input.apiKey.trim() : currentKey;
 
-  config.ai = {
-    ...config.ai,
-    provider: input.provider || config.ai.provider || 'gemini',
+  config[key] = {
+    ...config[key],
+    provider: input.provider || config[key].provider || 'gemini',
     apiKeyEncrypted: encryptSecret(nextKey),
-    model: input.model || config.ai.model || 'gemini-2.5-flash',
-    baseUrl: input.baseUrl || config.ai.baseUrl || '',
-    systemPrompt: input.systemPrompt || config.ai.systemPrompt || DEFAULT_PROMPT,
-    temperature: Number(input.temperature ?? config.ai.temperature ?? 0.3),
-    maxTokens: Number(input.maxTokens ?? config.ai.maxTokens ?? 700),
-    status: String(input.status || config.ai.status || 'active').toLowerCase(),
-    chatbotName: input.chatbotName || config.ai.chatbotName || 'Diff Coach',
-    welcomeMessage: input.welcomeMessage || config.ai.welcomeMessage || 'Xin chào, tôi là Diff Coach. Bạn cần hỗ trợ gì về tập luyện hoặc dinh dưỡng?',
+    model: input.model || config[key].model || 'gemini-2.5-flash',
+    baseUrl: input.baseUrl || config[key].baseUrl || '',
+    systemPrompt: input.systemPrompt || config[key].systemPrompt || (profile === 'nutrition' ? NUTRITION_PROMPT : DEFAULT_PROMPT),
+    temperature: Number(input.temperature ?? config[key].temperature ?? 0.3),
+    maxTokens: Number(input.maxTokens ?? config[key].maxTokens ?? (profile === 'nutrition' ? 1400 : 700)),
+    status: String(input.status || config[key].status || 'active').toLowerCase(),
   };
+
+  if (profile === 'chat') {
+    config.ai.chatbotName = input.chatbotName || config.ai.chatbotName || 'Diff Coach';
+    config.ai.welcomeMessage = input.welcomeMessage || config.ai.welcomeMessage || 'Xin chào, tôi là Diff Coach. Bạn cần hỗ trợ gì về tập luyện hoặc dinh dưỡng?';
+  }
 
   config.security = {
     ...config.security,
@@ -214,12 +235,17 @@ export async function clearApiKey() {
   return saveConfig(config);
 }
 
-export async function markConnectionTest(status) {
+export async function markConnectionTest(status, profile = 'chat') {
   const config = await getConfig();
-  config.ai = config.ai || {};
-  config.ai.lastTestAt = new Date().toISOString();
-  config.ai.lastTestStatus = status;
+  const key = profile === 'nutrition' ? 'nutritionAi' : 'ai';
+  config[key] = config[key] || {};
+  config[key].lastTestAt = new Date().toISOString();
+  config[key].lastTestStatus = status;
   return saveConfig(config);
+}
+
+function getAiProfile(config, profile = 'chat') {
+  return profile === 'nutrition' ? (config.nutritionAi || config.ai || {}) : (config.ai || {});
 }
 
 export async function incrementQuestionCount() {
@@ -246,4 +272,4 @@ function safeError(error) {
   return { name: error?.name, message: error?.message };
 }
 
-export { DEFAULT_PROMPT };
+export { DEFAULT_PROMPT, NUTRITION_PROMPT };

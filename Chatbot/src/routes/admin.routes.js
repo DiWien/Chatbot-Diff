@@ -1,7 +1,7 @@
 import express from 'express';
 import { SYSTEM_VERSION } from '../config/env.js';
 import { requireAdmin } from '../middleware/auth.js';
-import { DEFAULT_PROMPT, clearApiKey, getConfig, getSafeConfig, saveConfig, updateAdminCredentials, updateAiConfig } from '../storage/config.store.js';
+import { DEFAULT_PROMPT, NUTRITION_PROMPT, clearApiKey, getConfig, getSafeConfig, saveConfig, updateAdminCredentials, updateAiConfig } from '../storage/config.store.js';
 import { listKnowledge } from '../storage/knowledge.store.js';
 import { listLogs } from '../storage/logs.store.js';
 import { publicReplyForError, safeErrorCode, testAIConnection } from '../services/ai.service.js';
@@ -13,6 +13,7 @@ router.use(requireAdmin);
 
 router.get('/dashboard', asyncHandler(async (req, res) => {
   const safe = await getSafeConfig();
+  const nutritionSafe = await getSafeConfig('nutrition');
   const config = await getConfig();
   const docs = listKnowledge();
   const training = getTrainingStats();
@@ -22,6 +23,7 @@ router.get('/dashboard', asyncHandler(async (req, res) => {
       aiStatus: safe.status,
       provider: safe.provider,
       model: safe.model,
+      nutrition: { provider: nutritionSafe.provider, model: nutritionSafe.model, status: nutritionSafe.status, lastTestAt: nutritionSafe.lastTestAt, lastTestStatus: nutritionSafe.lastTestStatus },
       totalDocuments: docs.length,
       totalChunks: training.totalChunks,
       totalQuestions: config.stats?.totalQuestions || 0,
@@ -36,6 +38,7 @@ router.get('/dashboard', asyncHandler(async (req, res) => {
 }));
 
 router.get('/config', asyncHandler(async (req, res) => ok(res, { config: await getSafeConfig(), defaultPrompt: DEFAULT_PROMPT })));
+router.get('/config/nutrition', asyncHandler(async (req, res) => ok(res, { config: await getSafeConfig('nutrition'), defaultPrompt: NUTRITION_PROMPT })));
 
 router.post('/config', asyncHandler(async (req, res) => {
   await updateAiConfig(req.body || {});

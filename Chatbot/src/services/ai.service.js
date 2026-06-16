@@ -7,7 +7,8 @@ import { callOpenAI } from './openai.service.js';
 
 export async function askAI({ message, userId, source, image }) {
   const start = Date.now();
-  const safe = await getSafeConfig();
+  const profile = getProfileForSource(source);
+  const safe = await getSafeConfig(profile);
 
   if (safe.status !== 'active') {
     return { reply: 'Chatbot hiện đang tạm tắt.', provider: safe.provider, model: safe.model, usedKnowledge: false, latency: 0 };
@@ -31,13 +32,14 @@ export async function askAI({ message, userId, source, image }) {
 }
 
 export async function testAIConnection(input = {}) {
+  const profile = input.profile === 'nutrition' ? 'nutrition' : 'chat';
   try {
     const result = await callProvider({ message: 'Trả lời ngắn gọn: kết nối AI đã sẵn sàng.', context: '', override: input });
     const reply = normalizeProviderResult(result);
-    await markConnectionTest('success');
+    await markConnectionTest('success', profile);
     return { status: 'success', quota: 'available', usage: reply.usage, reply: reply.text };
   } catch (error) {
-    await markConnectionTest('failed');
+    await markConnectionTest('failed', profile);
     throw error;
   }
 }
@@ -55,10 +57,11 @@ function emptyUsage() {
 }
 
 async function callProvider({ message, context, image, override = {} }) {
+  const profile = override.profile === 'nutrition' ? 'nutrition' : 'chat';
   const config = await getConfig();
-  const safe = await getSafeConfig();
+  const safe = await getSafeConfig(profile);
   const provider = normalizeProvider(override.provider || safe.provider);
-  const apiKey = String(override.apiKey || '').trim() || getApiKey(config);
+  const apiKey = String(override.apiKey || '').trim() || getApiKey(config, profile);
   const payload = {
     apiKey,
     model: override.model || safe.model,
@@ -73,6 +76,10 @@ async function callProvider({ message, context, image, override = {} }) {
 
   if (provider === 'openai' || provider === 'router' || provider === 'custom') return callOpenAIRouter(payload);
   return callGemini(payload);
+}
+
+function getProfileForSource(source) {
+  return String(source || '').toLowerCase().includes('nutrition') ? 'nutrition' : 'chat';
 }
 
 async function callOpenAIRouter(payload) {
