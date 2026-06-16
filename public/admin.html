@@ -42,7 +42,7 @@
           <label>Welcome Message<textarea name="welcomeMessage" rows="3"></textarea></label>
           <div class="actions"><button class="btn primary" type="submit">Save Config</button><button class="btn" type="button" id="testConnection">Test Connection</button><button class="btn danger" type="button" id="deleteKey">Delete API Key</button><button class="btn" type="button" id="resetPrompt">Reset Default Prompt</button></div>
         </form>
-        <div class="card"><h2>Gợi ý model</h2><p>Gemini: <code>gemini-2.5-flash</code></p><p>OpenAI: <code>gpt-4.1-mini</code> hoặc <code>gpt-4o-mini</code></p><p>API key sau khi lưu chỉ hiển thị dạng mask, không trả full key về frontend.</p></div>
+        <div class="card"><h2>Gợi ý model</h2><p>Gemini: <code>gemini-2.5-flash</code></p><p>OpenAI: <code>gpt-4.1-mini</code> hoặc <code>gpt-4o-mini</code></p><p>API key sau khi lưu chỉ hiển thị dạng mask, không trả full key về frontend.</p><h3>AI Usage Check</h3><pre id="usageCheck">Bấm Test Connection để kiểm tra quota và token.</pre></div>
       </div>
     </section>
 
@@ -75,7 +75,7 @@ GET /widget/chatbot.js</pre><h3>Chat body</h3><pre>{
 
     <section class="tab-panel" id="chat"><div class="card chat-card"><h2>Chat Test</h2><div class="chat-box" id="chatBox"></div><form id="chatForm" class="chat-form"><input id="chatInput" placeholder="Nhập câu hỏi test..." required><button class="btn primary">Gửi</button><button type="button" class="btn" id="clearChat">Clear</button></form><p id="chatMeta"></p></div></section>
 
-    <section class="tab-panel" id="logs"><div class="card"><h2>Logs</h2><div class="table-wrap"><table><thead><tr><th>Time</th><th>Source</th><th>User</th><th>Message</th><th>Status</th><th>Latency</th><th>Error</th></tr></thead><tbody id="logRows"></tbody></table></div></div></section>
+    <section class="tab-panel" id="logs"><div class="card"><h2>Logs</h2><div class="table-wrap"><table><thead><tr><th>Time</th><th>Source</th><th>User</th><th>Message</th><th>Status</th><th>Latency</th><th>Tokens</th><th>Error</th><th>Detail</th></tr></thead><tbody id="logRows"></tbody></table></div></div></section>
 
     <section class="tab-panel" id="settings"><form class="card form" id="settingsForm"><h2>Settings</h2><label>Admin email<input name="adminEmail"></label><label>Admin password mới<input name="adminPassword" type="password"></label><label>Allowed Origin<input name="allowedOrigin"></label><label>Rate limit window ms<input name="rateLimitWindowMs" type="number"></label><label>Rate limit max<input name="rateLimitMax" type="number"></label><label>Chatbot status<select name="status"><option value="active">Active</option><option value="inactive">Inactive</option></select></label><div class="actions"><button class="btn primary">Save Settings</button><a class="btn" href="/api/admin/export" target="_blank">Export config</a></div></form></section>
   </main>

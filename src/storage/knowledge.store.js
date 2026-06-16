@@ -1,14 +1,17 @@
 import crypto from 'crypto';
 import { readJson, writeJson } from './file.store.js';
+import { getRuntimeData, saveRuntimeData } from './config.store.js';
 
 const FILE = 'knowledge.json';
 const TRAINING_FILE = 'training.json';
 
 export function listKnowledge() {
-  return readJson(FILE, []);
+  const knowledge = getRuntimeData().knowledge;
+  return Array.isArray(knowledge) && knowledge.length ? knowledge : readJson(FILE, []);
 }
 
 export function saveKnowledge(items) {
+  saveRuntimeData({ knowledge: items });
   return writeJson(FILE, items);
 }
 
@@ -35,13 +38,16 @@ export function updateKnowledge(id, patch) {
 }
 
 export function listTrainingChunks() {
-  return readJson(TRAINING_FILE, []);
+  const chunks = getRuntimeData().trainingChunks;
+  return Array.isArray(chunks) && chunks.length ? chunks : readJson(TRAINING_FILE, []);
 }
 
 export function saveTrainingChunks(chunks) {
+  saveRuntimeData({ trainingChunks: chunks });
   return writeJson(TRAINING_FILE, chunks);
 }
 
 export function clearTrainingChunks() {
+  saveRuntimeData({ trainingChunks: [] });
   return writeJson(TRAINING_FILE, []);
 }
