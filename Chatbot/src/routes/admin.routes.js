@@ -30,6 +30,7 @@ router.get('/dashboard', asyncHandler(async (req, res) => {
       allowedOrigin: safe.allowedOrigin,
       version: SYSTEM_VERSION,
       logs: listLogs().slice(0, 10),
+      lastUsage: listLogs().find((log) => log.tokens)?.tokens || null,
     },
   });
 }));
@@ -52,6 +53,7 @@ router.post('/test-connection', async (req, res) => {
       success: false,
       error: code,
       message: publicReplyForError(code),
+      detail: error?.message || '',
     });
   }
 });

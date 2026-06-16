@@ -12,5 +12,12 @@ export async function callOpenAI({ apiKey, model, systemPrompt, message, context
       { role: 'user', content: [context ? `Knowledge base context:\n${context}` : '', image ? 'A body photo was attached, but this OpenAI text-only route cannot inspect it. Give advice from typed stats only.' : '', `User question:\n${message}`].filter(Boolean).join('\n\n') },
     ],
   });
-  return completion.choices?.[0]?.message?.content?.trim() || '';
+  return {
+    text: completion.choices?.[0]?.message?.content?.trim() || '',
+    usage: {
+      inputTokens: Number(completion.usage?.prompt_tokens || 0),
+      outputTokens: Number(completion.usage?.completion_tokens || 0),
+      totalTokens: Number(completion.usage?.total_tokens || 0),
+    },
+  };
 }

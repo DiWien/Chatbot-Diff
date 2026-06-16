@@ -13,5 +13,16 @@ export async function callGemini({ apiKey, model, systemPrompt, message, context
     contents: [{ role: 'user', parts }],
     generationConfig: { temperature, maxOutputTokens: maxTokens, topP: 0.9 },
   });
-  return result.response.text().trim();
+  return {
+    text: result.response.text().trim(),
+    usage: normalizeGeminiUsage(result.response.usageMetadata),
+  };
+}
+
+function normalizeGeminiUsage(usage = {}) {
+  return {
+    inputTokens: Number(usage.promptTokenCount || 0),
+    outputTokens: Number(usage.candidatesTokenCount || 0),
+    totalTokens: Number(usage.totalTokenCount || 0),
+  };
 }

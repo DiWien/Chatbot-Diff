@@ -25,7 +25,7 @@ router.post('/chat', chatLimiter, asyncHandler(async (req, res) => {
 
   try {
     const result = await askAI({ message: message.trim(), userId, source, image });
-    return res.json({ success: true, reply: result.reply, meta: { provider: result.provider, model: result.model, latency: result.latency, usedKnowledge: result.usedKnowledge } });
+    return res.json({ success: true, reply: result.reply, meta: { provider: result.provider, model: result.model, latency: result.latency, usedKnowledge: result.usedKnowledge, usage: result.usage } });
   } catch (error) {
     const code = error.publicCode || 'AI_ERROR';
     const config = await getSafeConfig();

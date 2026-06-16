@@ -17,11 +17,12 @@ export async function askAI({ message, userId, source, image }) {
   const context = chunks.map((chunk, index) => `[${index + 1}] ${chunk.title}\n${chunk.content}`).join('\n\n');
 
   try {
-    const reply = await callProvider({ message, context, image });
+    const result = await callProvider({ message, context, image });
+    const reply = normalizeProviderResult(result);
     const latency = Date.now() - start;
     await incrementQuestionCount();
-    addLog({ source: source || 'unknown', userId: userId || '', message: truncate(message), responseStatus: 'success', latency, error: '' });
-    return { reply: reply || 'Diff Coach chưa có dữ liệu chắc chắn để trả lời câu hỏi này.', provider: safe.provider, model: safe.model, usedKnowledge: chunks.length > 0, latency };
+    addLog({ source: source || 'unknown', userId: userId || '', message: truncate(message), responseStatus: 'success', latency, error: '', tokens: reply.usage });
+    return { reply: reply.text || 'Diff Coach chưa có dữ liệu chắc chắn để trả lời câu hỏi này.', provider: safe.provider, model: safe.model, usedKnowledge: chunks.length > 0, latency, usage: reply.usage };
   } catch (error) {
     const latency = Date.now() - start;
     addLog({ source: source || 'unknown', userId: userId || '', message: truncate(message), responseStatus: 'error', latency, error: safeErrorCode(error), errorDetail: truncate(error?.message || '') });
@@ -31,13 +32,26 @@ export async function askAI({ message, userId, source, image }) {
 
 export async function testAIConnection(input = {}) {
   try {
-    await callProvider({ message: 'Trả lời ngắn gọn: kết nối AI đã sẵn sàng.', context: '', override: input });
+    const result = await callProvider({ message: 'Trả lời ngắn gọn: kết nối AI đã sẵn sàng.', context: '', override: input });
+    const reply = normalizeProviderResult(result);
     await markConnectionTest('success');
-    return { status: 'success' };
+    return { status: 'success', quota: 'available', usage: reply.usage, reply: reply.text };
   } catch (error) {
     await markConnectionTest('failed');
     throw error;
   }
+}
+
+function normalizeProviderResult(result) {
+  if (typeof result === 'string') return { text: result, usage: emptyUsage() };
+  return {
+    text: result?.text || '',
+    usage: { ...emptyUsage(), ...(result?.usage || {}) },
+  };
+}
+
+function emptyUsage() {
+  return { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
 }
 
 async function callProvider({ message, context, image, override = {} }) {
