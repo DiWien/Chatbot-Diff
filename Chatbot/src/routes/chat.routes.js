@@ -18,13 +18,13 @@ router.get('/public-config', asyncHandler(async (req, res) => {
 }));
 
 router.post('/chat', chatLimiter, asyncHandler(async (req, res) => {
-  const { message, userId, source } = req.body || {};
+  const { message, userId, source, image } = req.body || {};
   if (!message || typeof message !== 'string' || !message.trim()) {
     return res.status(400).json({ success: false, error: 'MESSAGE_REQUIRED', reply: 'Vui lòng nhập câu hỏi để Diff Coach hỗ trợ bạn.' });
   }
 
   try {
-    const result = await askAI({ message: message.trim(), userId, source });
+    const result = await askAI({ message: message.trim(), userId, source, image });
     return res.json({ success: true, reply: result.reply, meta: { provider: result.provider, model: result.model, latency: result.latency, usedKnowledge: result.usedKnowledge } });
   } catch (error) {
     const code = error.publicCode || 'AI_ERROR';

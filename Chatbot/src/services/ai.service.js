@@ -5,7 +5,7 @@ import { searchRelevantChunks } from './training.service.js';
 import { callGemini } from './gemini.service.js';
 import { callOpenAI } from './openai.service.js';
 
-export async function askAI({ message, userId, source }) {
+export async function askAI({ message, userId, source, image }) {
   const start = Date.now();
   const safe = await getSafeConfig();
 
@@ -17,14 +17,14 @@ export async function askAI({ message, userId, source }) {
   const context = chunks.map((chunk, index) => `[${index + 1}] ${chunk.title}\n${chunk.content}`).join('\n\n');
 
   try {
-    const reply = await callProvider({ message, context });
+    const reply = await callProvider({ message, context, image });
     const latency = Date.now() - start;
     await incrementQuestionCount();
     addLog({ source: source || 'unknown', userId: userId || '', message: truncate(message), responseStatus: 'success', latency, error: '' });
     return { reply: reply || 'Diff Coach chưa có dữ liệu chắc chắn để trả lời câu hỏi này.', provider: safe.provider, model: safe.model, usedKnowledge: chunks.length > 0, latency };
   } catch (error) {
     const latency = Date.now() - start;
-    addLog({ source: source || 'unknown', userId: userId || '', message: truncate(message), responseStatus: 'error', latency, error: safeErrorCode(error) });
+    addLog({ source: source || 'unknown', userId: userId || '', message: truncate(message), responseStatus: 'error', latency, error: safeErrorCode(error), errorDetail: truncate(error?.message || '') });
     throw Object.assign(error, { publicCode: safeErrorCode(error), latency });
   }
 }
@@ -40,7 +40,7 @@ export async function testAIConnection(input = {}) {
   }
 }
 
-async function callProvider({ message, context, override = {} }) {
+async function callProvider({ message, context, image, override = {} }) {
   const config = await getConfig();
   const safe = await getSafeConfig();
   const provider = normalizeProvider(override.provider || safe.provider);
@@ -53,6 +53,7 @@ async function callProvider({ message, context, override = {} }) {
     maxTokens: Number(override.maxTokens ?? safe.maxTokens),
     message,
     context,
+    image,
   };
 
   if (provider === 'openai') return callOpenAI(payload);

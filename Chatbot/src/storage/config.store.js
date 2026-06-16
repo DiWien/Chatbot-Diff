@@ -47,6 +47,7 @@ async function createDefaultConfig() {
       rateLimitMax: env.RATE_LIMIT_MAX,
     },
     stats: { totalQuestions: 0 },
+    runtimeData: { logs: [], knowledge: [], trainingChunks: [] },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -58,6 +59,7 @@ async function migrateConfig(config) {
   config.ai = config.ai || {};
   config.security = config.security || {};
   config.stats = config.stats || { totalQuestions: 0 };
+  config.runtimeData = config.runtimeData || { logs: [], knowledge: [], trainingChunks: [] };
 
   if (!config.admin.username) {
     config.admin.username = env.ADMIN_USERNAME;
@@ -222,6 +224,19 @@ export async function incrementQuestionCount() {
   config.stats = config.stats || {};
   config.stats.totalQuestions = Number(config.stats.totalQuestions || 0) + 1;
   return saveConfig(config);
+}
+
+export function getRuntimeData() {
+  const config = getConfigSync();
+  config.runtimeData = config.runtimeData || { logs: [], knowledge: [], trainingChunks: [] };
+  return config.runtimeData;
+}
+
+export function saveRuntimeData(patch) {
+  const config = getConfigSync();
+  config.runtimeData = { logs: [], knowledge: [], trainingChunks: [], ...(config.runtimeData || {}), ...patch };
+  void saveConfig(config);
+  return config.runtimeData;
 }
 
 function safeError(error) {
