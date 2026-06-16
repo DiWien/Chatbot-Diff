@@ -21,7 +21,7 @@ export async function ensureConfig() {
 }
 
 async function createDefaultConfig() {
-  const apiKey = env.AI_PROVIDER === 'openai' ? env.OPENAI_API_KEY : env.GEMINI_API_KEY;
+  const apiKey = env.AI_PROVIDER === 'openai' ? env.OPENAI_API_KEY : env.AI_PROVIDER.includes('router') ? env.ROUTER_API_KEY : env.GEMINI_API_KEY;
   return {
     admin: {
       username: env.ADMIN_USERNAME,
@@ -32,6 +32,7 @@ async function createDefaultConfig() {
       provider: env.AI_PROVIDER,
       apiKeyEncrypted: encryptSecret(apiKey),
       model: env.AI_PROVIDER === 'openai' ? env.OPENAI_MODEL : env.GEMINI_MODEL,
+      baseUrl: env.ROUTER_BASE_URL,
       systemPrompt: DEFAULT_PROMPT,
       temperature: 0.3,
       maxTokens: 700,
@@ -144,6 +145,7 @@ export function toSafeConfig(config = getConfigSync()) {
   return {
     provider: config.ai?.provider || 'gemini',
     model: config.ai?.model || 'gemini-2.5-flash',
+    baseUrl: config.ai?.baseUrl || '',
     systemPrompt: config.ai?.systemPrompt || DEFAULT_PROMPT,
     temperature: Number(config.ai?.temperature ?? 0.3),
     maxTokens: Number(config.ai?.maxTokens ?? 700),
@@ -180,6 +182,7 @@ export async function updateAiConfig(input) {
     provider: input.provider || config.ai.provider || 'gemini',
     apiKeyEncrypted: encryptSecret(nextKey),
     model: input.model || config.ai.model || 'gemini-2.5-flash',
+    baseUrl: input.baseUrl || config.ai.baseUrl || '',
     systemPrompt: input.systemPrompt || config.ai.systemPrompt || DEFAULT_PROMPT,
     temperature: Number(input.temperature ?? config.ai.temperature ?? 0.3),
     maxTokens: Number(input.maxTokens ?? config.ai.maxTokens ?? 700),

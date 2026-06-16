@@ -62,6 +62,7 @@ async function callProvider({ message, context, image, override = {} }) {
   const payload = {
     apiKey,
     model: override.model || safe.model,
+    baseUrl: override.baseUrl || safe.baseUrl,
     systemPrompt: override.systemPrompt || safe.systemPrompt,
     temperature: Number(override.temperature ?? safe.temperature),
     maxTokens: Number(override.maxTokens ?? safe.maxTokens),
@@ -70,14 +71,27 @@ async function callProvider({ message, context, image, override = {} }) {
     image,
   };
 
-  if (provider === 'openai') return callOpenAI(payload);
-  if (provider === 'custom') throw Object.assign(new Error('Custom API chưa được cấu hình.'), { code: 'CUSTOM_NOT_CONFIGURED' });
+  if (provider === 'openai' || provider === 'router' || provider === 'custom') return callOpenAIRouter(payload);
   return callGemini(payload);
+}
+
+async function callOpenAIRouter(payload) {
+  const models = String(payload.model || '').split(',').map((item) => item.trim()).filter(Boolean);
+  let lastError;
+  for (const model of models.length ? models : [payload.model]) {
+    try {
+      return await callOpenAI({ ...payload, model });
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError || Object.assign(new Error('No router model configured.'), { code: 'ROUTER_MODEL_REQUIRED' });
 }
 
 function normalizeProvider(provider) {
   const value = String(provider || 'gemini').toLowerCase();
   if (value.includes('openai')) return 'openai';
+  if (value.includes('router') || value.includes('openrouter') || value.includes('9router') || value.includes('kilo')) return 'router';
   if (value.includes('custom')) return 'custom';
   return 'gemini';
 }

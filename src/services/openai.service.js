@@ -1,8 +1,8 @@
 import OpenAI from 'openai';
 
-export async function callOpenAI({ apiKey, model, systemPrompt, message, context, image, temperature, maxTokens }) {
+export async function callOpenAI({ apiKey, model, baseUrl, systemPrompt, message, context, image, temperature, maxTokens }) {
   if (!apiKey) throw Object.assign(new Error('Missing OpenAI API key'), { code: 'AI_AUTH_ERROR' });
-  const client = new OpenAI({ apiKey });
+  const client = new OpenAI({ apiKey, ...(baseUrl ? { baseURL: baseUrl } : {}) });
   const completion = await client.chat.completions.create({
     model,
     temperature,
